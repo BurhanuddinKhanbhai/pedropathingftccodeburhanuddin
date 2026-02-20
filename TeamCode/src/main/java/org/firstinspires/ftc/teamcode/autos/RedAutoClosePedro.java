@@ -103,7 +103,7 @@ public class RedAutoClosePedro extends LinearOpMode {
 
         PathChain toFinalShot   = line(INTAKE_ROW2_POSE, FINAL_SHOT_POSE);
 
-        telemetry.addLine("RedAutoCloseReady");
+        telemetry.addLine("RedAutoClosReady");
 
         telemetry.update();
 
