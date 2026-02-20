@@ -79,7 +79,7 @@ public class TeleOp_MainSubsystems extends OpMode {
 
         telemetry.addLine("TeleOp ready (Crash-Proof, No Angle Debug)");
         telemetry.addLine("GP1: drive, A=shoot hold, triggers=intake, B=feeder reverse, Y=override run both");
-        telemetry.addLine("GP2: RB enable shooter, LB disable shooter, Start toggle AutoAim, Back toggle PIDF/FF");
+        telemetry.addLine("GP2: RB enable shooter, LB  disable shooter, Start toggle AutoAim, Back toggle PIDF/FF");
         telemetry.update();
     }
 
