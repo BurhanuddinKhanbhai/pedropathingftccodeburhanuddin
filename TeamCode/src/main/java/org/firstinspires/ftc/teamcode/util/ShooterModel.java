@@ -8,7 +8,7 @@ public class ShooterModel {
     // Fill these with YOUR tested points (distance in inches)
     // Keep arrays same length, sorted by distance ascending.
     private static double[] D = { 0, 30, 40, 50, 60, 70, 80};
-    private static double[] RPM = { 2300, 2400, 2650, 2800, 2950, 3600, 3900 };
+    private static double[] RPM = { 2600, 2650, 2700, 2800, 2950, 3600, 3900 };
     private static  double[] HOOD = { 1, 1, 1, 1, .8, .8, .8 };
 
     public static double rpmFromDistance(double distIn) {
