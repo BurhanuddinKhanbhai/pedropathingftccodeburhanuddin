@@ -12,7 +12,6 @@ import com.pedropathing.geometry.*;
 import com.pedropathing.paths.*;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.HoodSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeFeederSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LimelightSubsystem;
@@ -23,28 +22,35 @@ import org.firstinspires.ftc.teamcode.util.ShooterModel;
 public class RedAutoClosePedro extends LinearOpMode {
 
     // =========================
-    // 1) START POSE (YOU SAID THIS)
+    // RED SIDE POSES (EDIT THESE DIRECTLY)
+    // These are the "mirrored" versions of your Blue poses, but now hard-coded so you can tweak freely.
+    //
+    // Notes:
+    // - X values are negated vs Blue (your request).
+    // - Headings are set to the proper mirrored headings (PI - theta), already converted into degrees below:
+    //   47deg -> 133deg
+    //   45deg -> 135deg
+    //   90deg -> 90deg
+    //   0deg  -> 180deg
     // =========================
-    private static final Pose START = new Pose(72, 72, Math.toRadians(0));
 
-    // =========================
-    // 2) WAYPOINTS (ported from your old RR route)
-    // Assumption: RR (0,0) == Pedro (72,72)
-    // Change these if your coordinate mapping differs.
-    // =========================
-    private static final Pose FIRST_SHOT_POSE   = new Pose(28, 37, Math.toRadians(47)); // RR(-44,-35)
-    private static final Pose BACK_SHOT_POSE    = new Pose(28, 32, Math.toRadians(47)); // RR(-44,-40)
-    private static final Pose INTAKE_ROW1_POSE  = new Pose(17, 82, Math.toRadians(90)); // RR(-55,10)
-    private static final Pose ROW2_START_POSE   = new Pose(-11, 32, Math.toRadians(90)); // RR(-83,-40)
-    private static final Pose INTAKE_ROW2_POSE  = new Pose(-11, 84, Math.toRadians(90)); // RR(-83,12)
-    private static final Pose FINAL_SHOT_POSE   = new Pose(27, 27, Math.toRadians(45)); // RR(-45,-45)
+    private static final Pose START = new Pose(-72, 72, Math.toRadians(180));
+
+    private static final Pose FIRST_SHOT_POSE   = new Pose(-28, 37, Math.toRadians(133)); // from Blue (28,37,47)
+    private static final Pose BACK_SHOT_POSE    = new Pose(-28, 32, Math.toRadians(133)); // from Blue (28,32,47)
+    private static final Pose INTAKE_ROW1_POSE  = new Pose(-17, 82, Math.toRadians(90));  // from Blue (17,82,90)
+
+    // Blue ROW2_START had x = -11, so red is x = +11
+    private static final Pose ROW2_START_POSE   = new Pose(11, 32, Math.toRadians(90));   // from Blue (-11,32,90)
+    private static final Pose INTAKE_ROW2_POSE  = new Pose(11, 84, Math.toRadians(90));   // from Blue (-11,84,90)
+
+    private static final Pose FINAL_SHOT_POSE   = new Pose(-27, 27, Math.toRadians(135)); // from Blue (27,27,45)
 
     // =========================
     // Subsystems
     // =========================
     private Follower follower;
 
-    private DriveSubsystem drive; // not required for auto, but harmless to keep if you want manual overrides later
     private ShooterSubsystem shooter;
     private HoodSubsystem hood;
     private IntakeFeederSubsystem intakeFeeder;
@@ -56,14 +62,13 @@ public class RedAutoClosePedro extends LinearOpMode {
     private static final double RPM_TOL = 75;
     private static final long SPINUP_TIMEOUT_MS = 1800;
 
-    // How long to run feeder to dump ~3 pixels (tune on field)
     private static final long FEED_MS = 850;
     private static final double INTAKE_FEED_PWR = 1.0;
 
     @Override
     public void runOpMode() {
 
-        // ---------- Hardware (same names as your TeleOp_MainSubsystems) ----------
+        // ---------- Hardware ----------
         DcMotorEx fl = hardwareMap.get(DcMotorEx.class, "frontLeftDrive");
         DcMotorEx fr = hardwareMap.get(DcMotorEx.class, "frontRightDrive");
         DcMotorEx bl = hardwareMap.get(DcMotorEx.class, "backLeftDrive");
@@ -79,7 +84,6 @@ public class RedAutoClosePedro extends LinearOpMode {
 
         Limelight3A ll = hardwareMap.get(Limelight3A.class, "limelight");
 
-        drive = new DriveSubsystem(fl, fr, bl, br);
         shooter = new ShooterSubsystem(leftFly, rightFly);
         hood = new HoodSubsystem(hoodServo);
         intakeFeeder = new IntakeFeederSubsystem(intake, feeder);
@@ -88,26 +92,27 @@ public class RedAutoClosePedro extends LinearOpMode {
         // Pipeline 2 like your TeleOp
         limelight.init(2, 80);
 
-        // HOME TEST VALUES (set these to your real robot numbers)
-        limelight.targetHeightIn = 16;        // tag center height
-        limelight.cameraHeightIn = 18;        // lens center height
-        limelight.cameraMountAngleDeg = 0.0;  // tilt angle
+        // HOME TEST VALUES (set to your real robot numbers)
+        limelight.targetHeightIn = 30;
+        limelight.cameraHeightIn = 18;
+        limelight.cameraMountAngleDeg = 0.0;
 
         // ---------- Pedro follower ----------
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(START);
 
         // ---------- Build paths ----------
-        PathChain toFirstShot = line(START, FIRST_SHOT_POSE);
-        PathChain toBackShot = line(FIRST_SHOT_POSE, BACK_SHOT_POSE);
-        PathChain toIntakeRow1 = line(BACK_SHOT_POSE, INTAKE_ROW1_POSE);
-        PathChain backToShoot1 = line(INTAKE_ROW1_POSE, BACK_SHOT_POSE);
-        PathChain toRow2Start = line(BACK_SHOT_POSE, ROW2_START_POSE);
-        PathChain toIntakeRow2 = line(ROW2_START_POSE, INTAKE_ROW2_POSE);
-        PathChain toFinalShot = line(INTAKE_ROW2_POSE, FINAL_SHOT_POSE);
+        PathChain toFirstShot   = line(START, FIRST_SHOT_POSE);
+        PathChain toBackShot    = line(FIRST_SHOT_POSE, BACK_SHOT_POSE);
+        PathChain toIntakeRow1  = line(BACK_SHOT_POSE, INTAKE_ROW1_POSE);
+        PathChain backToShoot1  = line(INTAKE_ROW1_POSE, BACK_SHOT_POSE);
+        PathChain toRow2Start   = line(BACK_SHOT_POSE, ROW2_START_POSE);
+        PathChain toIntakeRow2  = line(ROW2_START_POSE, INTAKE_ROW2_POSE);
+        PathChain toFinalShot   = line(INTAKE_ROW2_POSE, FINAL_SHOT_POSE);
 
-        telemetry.addLine("BlueAutoClose (Pedro) ready");
+        telemetry.addLine("RedAutoClose (Pedro) ready");
         telemetry.addData("Start", poseStr(START));
+        telemetry.addData("FirstShot", poseStr(FIRST_SHOT_POSE));
         telemetry.update();
 
         waitForStart();
@@ -116,74 +121,68 @@ public class RedAutoClosePedro extends LinearOpMode {
         // =========================
         // AUTO SEQUENCE
         // =========================
-
-        // 1) Go to first shot spot
-        followAndWait(toFirstShot);
+        followAndWait(toFirstShot, FIRST_SHOT_POSE);
         shootBurst3();
 
-        // 2) Go where you were shooting from in the RR file (-44,-40)
-        followAndWait(toBackShot);
+        followAndWait(toBackShot, BACK_SHOT_POSE);
 
-        // 3) Intake first row
         setIntake(true);
-        followAndWait(toIntakeRow1);
+        followAndWait(toIntakeRow1, INTAKE_ROW1_POSE);
         setIntake(false);
 
-        // 4) Back and shoot again
-        followAndWait(backToShoot1);
+        followAndWait(backToShoot1, BACK_SHOT_POSE);
         shootBurst3();
 
-        // 5) Go to second row start, intake second row
-        followAndWait(toRow2Start);
+        followAndWait(toRow2Start, ROW2_START_POSE);
+
         setIntake(true);
-        followAndWait(toIntakeRow2);
+        followAndWait(toIntakeRow2, INTAKE_ROW2_POSE);
         setIntake(false);
 
-        // 6) Final shot spot + shoot
-        followAndWait(toFinalShot);
+        followAndWait(toFinalShot, FINAL_SHOT_POSE);
         shootBurst3();
 
-        // Stop everything
         safeStopAll();
     }
 
     // =========================
     // Pedro helpers
+    // Rotation fix: rotate from a.heading -> b.heading while driving
     // =========================
-
     private PathChain line(Pose a, Pose b) {
         return follower.pathBuilder()
                 .addPath(new BezierLine(a, b))
-                // Keep constant heading per segment (simple + reliable).
-                // If you want the robot to rotate while moving, swap to linear heading interpolation.
-                .setConstantHeadingInterpolation(a.getHeading())
+                .setLinearHeadingInterpolation(a.getHeading(), b.getHeading())
                 .build();
     }
 
-    private void followAndWait(PathChain path) {
+    private void followAndWait(PathChain path, Pose expectedEndPose) {
         follower.followPath(path);
+
         while (opModeIsActive() && follower.isBusy()) {
-            // Update follower + subsystems continuously
             follower.update();
+
             limelight.update();
             shooter.update();
             hood.update();
             intakeFeeder.update();
 
-            telemetry.addData("Pose", follower.getPose());
+            Pose cur = follower.getPose();
+            telemetry.addData("Cur XY", "(%.1f, %.1f)", cur.getX(), cur.getY());
+            telemetry.addData("Cur H(deg)", "%.1f", Math.toDegrees(cur.getHeading()));
+            telemetry.addData("Tgt H(deg)", "%.1f", Math.toDegrees(expectedEndPose.getHeading()));
             telemetry.update();
+
+            idle();
         }
     }
 
     // =========================
     // Shooting / intake helpers
     // =========================
-
     private void shootBurst3() {
-        // Enable shooter
         shooter.setEnabled(true);
 
-        // Try to get a fresh Limelight result for distance
         ElapsedTime aimTimer = new ElapsedTime();
         aimTimer.reset();
         while (opModeIsActive() && aimTimer.milliseconds() < 350) {
@@ -193,14 +192,13 @@ public class RedAutoClosePedro extends LinearOpMode {
             idle();
         }
 
-        double dist = limelight.getDistanceInches(); // filtered distance
+        double dist = limelight.getDistanceInches();
         double targetRPM = ShooterModel.rpmFromDistance(dist);
         double hoodPos = ShooterModel.hoodFromDistance(dist);
 
         shooter.setTargetRPM(targetRPM);
         hood.setTargetPos(hoodPos);
 
-        // Spinup wait (with timeout)
         ElapsedTime spin = new ElapsedTime();
         spin.reset();
         while (opModeIsActive() && spin.milliseconds() < SPINUP_TIMEOUT_MS) {
@@ -221,7 +219,6 @@ public class RedAutoClosePedro extends LinearOpMode {
             idle();
         }
 
-        // Feed burst (tune FEED_MS to get exactly 3)
         ElapsedTime feedT = new ElapsedTime();
         feedT.reset();
         while (opModeIsActive() && feedT.milliseconds() < FEED_MS) {
@@ -234,13 +231,9 @@ public class RedAutoClosePedro extends LinearOpMode {
             idle();
         }
 
-        // stop feeder
         intakeFeeder.setIntakePower(0);
         intakeFeeder.setFeederPower(0);
         intakeFeeder.update();
-
-        // keep shooter running (optional; keeps next shot consistent)
-        // shooter.setEnabled(true); // already enabled
 
         sleep(100);
     }
@@ -257,9 +250,7 @@ public class RedAutoClosePedro extends LinearOpMode {
     }
 
     private void safeStopAll() {
-        try {
-            shooter.setEnabled(false);
-        } catch (Exception ignored) {}
+        try { shooter.setEnabled(false); } catch (Exception ignored) {}
 
         try {
             intakeFeeder.setIntakePower(0.0);
