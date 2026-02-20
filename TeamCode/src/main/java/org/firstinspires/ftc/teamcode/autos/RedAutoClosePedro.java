@@ -37,7 +37,7 @@ public class RedAutoClosePedro extends LinearOpMode {
     private static final Pose START = new Pose(-72, 72, Math.toRadians(180));
 
     private static final Pose FIRST_SHOT_POSE   = new Pose(-30, 15, Math.toRadians(133)); // from Blue (28,37,47)
-    private static final Pose BACK_SHOT_POSE    = new Pose(-28, 32, Math.toRadians(133)); // from Blue (28,32,47)
+    private static final Pose BACK_SHOT_POSE    = new Pose(-28, 31, Math.toRadians(133)); // from Blue (28,32,47)
     private static final Pose INTAKE_ROW1_POSE  = new Pose(10, 84, Math.toRadians(90));  // from Blue (17,82,90)
 
     // Blue ROW2_START had x = -11, so red is x = +11
