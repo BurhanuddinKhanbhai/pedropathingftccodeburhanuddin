@@ -230,7 +230,7 @@ public class RedAutoClosePedro extends LinearOpMode {
             shooter.update();
             intakeFeeder.update();
 
-            telemetry.addLine("=== FEEDING ===");
+            telemetry.addLine("=== FEEDING ==");
             telemetry.addData("Distance (in)", "%.1f", dist);
             telemetry.addData("Target RPM", "%.0f", targetRPM);
             telemetry.addData("Current RPM", "%.0f", shooter.getRPM());
