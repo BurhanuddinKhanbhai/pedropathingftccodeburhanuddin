@@ -34,15 +34,15 @@ public class RedAutoClosePedro extends LinearOpMode {
     //   0deg  -> 180deg
     // =========================
 
-    private static final Pose START = new Pose(-72, -72, Math.toRadians(90));
+    private static final Pose START = new Pose(-72, 72, Math.toRadians(180));
 
-    private static final Pose FIRST_SHOT_POSE   = new Pose(-28, 37, Math.toRadians(133)); // from Blue (28,37,47)
+    private static final Pose FIRST_SHOT_POSE   = new Pose(-30, 15, Math.toRadians(133)); // from Blue (28,37,47)
     private static final Pose BACK_SHOT_POSE    = new Pose(-28, 32, Math.toRadians(133)); // from Blue (28,32,47)
-    private static final Pose INTAKE_ROW1_POSE  = new Pose(11, 84, Math.toRadians(90));  // from Blue (17,82,90)
+    private static final Pose INTAKE_ROW1_POSE  = new Pose(10, 84, Math.toRadians(90));  // from Blue (17,82,90)
 
     // Blue ROW2_START had x = -11, so red is x = +11
     private static final Pose ROW2_START_POSE   = new Pose(11, 32, Math.toRadians(90));   // from Blue (-11,32,90)
-    private static final Pose INTAKE_ROW2_POSE  = new Pose(11, 84, Math.toRadians(90));   // from Blue (-11,84,90)
+    private static final Pose INTAKE_ROW2_POSE  = new Pose(40, 84, Math.toRadians(90));   // from Blue (-11,84,90)
 
     private static final Pose FINAL_SHOT_POSE   = new Pose(-27, 27, Math.toRadians(135)); // from Blue (27,27,45)
 
