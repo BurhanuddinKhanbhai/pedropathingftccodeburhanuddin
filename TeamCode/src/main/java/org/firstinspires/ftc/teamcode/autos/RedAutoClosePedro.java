@@ -30,13 +30,20 @@ public class RedAutoClosePedro extends LinearOpMode {
     private static final Pose FIRST_SHOT_POSE   = new Pose(-30, 15, Math.toRadians(120));
     private static final Pose BACK_SHOT_POSE    = new Pose(-28, 31, Math.toRadians(120));
 
-    // NEW LINEUP POSES
+    // If you want a different shoot spot for row 3 later, change this pose.
+    private static final Pose THIRD_SHOT_POSE = new Pose(-28, 31, Math.toRadians(120));
+
+    // LINEUP POSES
     private static final Pose FIRST_SHOT_LINEUP  = new Pose(5, 15, Math.toRadians(90));
     private static final Pose SECOND_SHOT_LINEUP = new Pose(40, 32, Math.toRadians(90));
+    private static final Pose THIRD_SHOT_LINEUP  = new Pose(75, 32, Math.toRadians(90));
 
-    private static final Pose INTAKE_ROW1_POSE  = new Pose(5, 87, Math.toRadians(90));
+    private static final Pose INTAKE_ROW1_POSE  = new Pose(5, 91, Math.toRadians(90));
     private static final Pose ROW2_START_POSE   = new Pose(11, 32, Math.toRadians(90));
-    private static final Pose INTAKE_ROW2_POSE  = new Pose(40, 87, Math.toRadians(90));
+    private static final Pose INTAKE_ROW2_POSE  = new Pose(40, 96, Math.toRadians(90));
+
+    private static final Pose ROW3_START_POSE   = new Pose(20, 32, Math.toRadians(90));
+    private static final Pose INTAKE_ROW3_POSE  = new Pose(75, 96, Math.toRadians(90));
 
     private static final Pose FINAL_SHOT_POSE   = new Pose(-27, 27, Math.toRadians(120));
 
@@ -89,22 +96,31 @@ public class RedAutoClosePedro extends LinearOpMode {
         // Build Paths
         // =========================
 
-        PathChain toFirstShot   = line(START, FIRST_SHOT_POSE);
-        PathChain toBackShot    = line(FIRST_SHOT_POSE, BACK_SHOT_POSE);
+        PathChain toFirstShot      = line(START, FIRST_SHOT_POSE);
+        PathChain toBackShot       = line(FIRST_SHOT_POSE, BACK_SHOT_POSE);
 
-        PathChain toFirstLineup = line(BACK_SHOT_POSE, FIRST_SHOT_LINEUP);
-        PathChain lineupToRow1  = line(FIRST_SHOT_LINEUP, INTAKE_ROW1_POSE);
+        // ROW 1
+        PathChain toFirstLineup    = line(BACK_SHOT_POSE, FIRST_SHOT_LINEUP);
+        PathChain lineupToRow1     = line(FIRST_SHOT_LINEUP, INTAKE_ROW1_POSE);
+        PathChain backToShoot1     = line(INTAKE_ROW1_POSE, BACK_SHOT_POSE);
 
-        PathChain backToShoot1  = line(INTAKE_ROW1_POSE, BACK_SHOT_POSE);
+        // ROW 2
+        PathChain toRow2Start      = line(BACK_SHOT_POSE, ROW2_START_POSE);
+        PathChain toSecondLineup   = line(ROW2_START_POSE, SECOND_SHOT_LINEUP);
+        PathChain lineupToRow2     = line(SECOND_SHOT_LINEUP, INTAKE_ROW2_POSE);
 
-        PathChain toRow2Start   = line(BACK_SHOT_POSE, ROW2_START_POSE);
-        PathChain toSecondLineup = line(ROW2_START_POSE, SECOND_SHOT_LINEUP);
-        PathChain lineupToRow2   = line(SECOND_SHOT_LINEUP, INTAKE_ROW2_POSE);
+        // NEW: back after ROW 2 to shoot again
+        PathChain backToShoot2     = line(INTAKE_ROW2_POSE, BACK_SHOT_POSE);
 
-        PathChain toFinalShot   = line(INTAKE_ROW2_POSE, FINAL_SHOT_POSE);
+        // ROW 3 (using your new poses)
+        PathChain toRow3Start      = line(THIRD_SHOT_POSE, ROW3_START_POSE);     // from shoot spot -> lane start
+        PathChain toThirdLineup    = line(ROW3_START_POSE, THIRD_SHOT_LINEUP);   // lane start -> lineup at x=75
+        PathChain lineupToRow3     = line(THIRD_SHOT_LINEUP, INTAKE_ROW3_POSE);  // lineup -> intake row 3
 
-        telemetry.addLine("RedAutoClosReady");
+        // Final
+        PathChain toFinalShot      = line(INTAKE_ROW3_POSE, FINAL_SHOT_POSE);
 
+        telemetry.addLine("RedAutoCloseReady");
         telemetry.update();
 
         waitForStart();
@@ -135,6 +151,18 @@ public class RedAutoClosePedro extends LinearOpMode {
         followAndWait(lineupToRow2);
         setIntake(false);
 
+        // NEW: shoot after row 2
+        followAndWait(backToShoot2);
+        shootBurst3();
+
+        // ROW 3
+        followAndWait(toRow3Start);
+        followAndWait(toThirdLineup);
+        setIntake(true);
+        followAndWait(lineupToRow3);
+        setIntake(false);
+
+        // Final Shot after row 3
         followAndWait(toFinalShot);
         shootBurst3();
 
@@ -170,14 +198,12 @@ public class RedAutoClosePedro extends LinearOpMode {
 
         shooter.setEnabled(true);
 
-        // Small aim delay
         ElapsedTime aimTimer = new ElapsedTime();
         aimTimer.reset();
         while (opModeIsActive() && aimTimer.milliseconds() < 300) {
             limelight.update();
             shooter.update();
             hood.update();
-
             telemetry.addLine("Aiming...");
             telemetry.update();
             idle();
@@ -190,9 +216,6 @@ public class RedAutoClosePedro extends LinearOpMode {
         shooter.setTargetRPM(targetRPM);
         hood.setTargetPos(hoodPos);
 
-        // =========================
-        // SPIN UP WITH TELEMETRY
-        // =========================
         ElapsedTime spin = new ElapsedTime();
         spin.reset();
 
@@ -216,9 +239,6 @@ public class RedAutoClosePedro extends LinearOpMode {
             idle();
         }
 
-        // =========================
-        // FEED WITH TELEMETRY
-        // =========================
         ElapsedTime feed = new ElapsedTime();
         feed.reset();
 

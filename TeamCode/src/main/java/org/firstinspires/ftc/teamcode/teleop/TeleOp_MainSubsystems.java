@@ -26,6 +26,10 @@ public class TeleOp_MainSubsystems extends OpMode {
     // Shooter gating (aim gate removed)
     private static final double RPM_TOL = 75;
 
+    // Fixed-shot override (HOLD)
+    private static final double FIXED_SHOT_RPM = 3900;
+    private static final double FIXED_HOOD_POS = 0.75;
+
     // Toggle edge detection (gamepad2)
     private boolean lastStart2 = false;
     private boolean lastBack2 = false;
@@ -37,7 +41,7 @@ public class TeleOp_MainSubsystems extends OpMode {
     // Limelight safety / fallback
     private long llFaultUntilMs = 0;                  // if LL throws, ignore LL until this time
     private static final long LL_FAULT_COOLDOWN_MS = 600;
-    private double lastGoodDistanceIn = 70;         // fallback distance for autoaim
+    private double lastGoodDistanceIn = 70;           // fallback distance for autoaim
     private long lastGoodDistanceMs = 0;
     private static final long GOOD_DIST_STALE_MS = 1000;
 
@@ -78,8 +82,9 @@ public class TeleOp_MainSubsystems extends OpMode {
         limelight.cameraMountAngleDeg = 0.0;  // tilt
 
         telemetry.addLine("TeleOp ready (Crash-Proof, No Angle Debug)");
-        telemetry.addLine("GP1: drive, A=shoot hold, triggers=intake, B=feeder reverse, Y=override run both");
-        telemetry.addLine("GP2: RB enable shooter, LB  disable shooter, Start toggle AutoAim, Back toggle PIDF/FF");
+        telemetry.addLine("GP1: drive, A=shoot hold (autoaim), B=FIXED SHOT hold, X=feeder reverse, triggers=intake");
+        telemetry.addLine("GP1: Y=override run both forward");
+        telemetry.addLine("GP2: RB enable shooter, LB disable shooter, Start toggle AutoAim, Back toggle PIDF/FF");
         telemetry.update();
     }
 
@@ -129,23 +134,39 @@ public class TeleOp_MainSubsystems extends OpMode {
         handleLiveTuningAndRpmAdjust();
 
         // =======================
-        // AutoAim setpoints (distance-based, using last good distance)
+        // Fixed shot override (HOLD B)
+        // =======================
+        boolean fixedShotHeld = gamepad1.b;
+
+        // =======================
+        // Setpoints (Fixed overrides AutoAim)
         // =======================
         double targetRPM;
         double hoodPos;
 
-        if (autoAimEnabled) {
-            boolean distFresh = (System.currentTimeMillis() - lastGoodDistanceMs) <= GOOD_DIST_STALE_MS;
-            if (distFresh) {
-                targetRPM = ShooterModel.rpmFromDistance(lastGoodDistanceIn);
-                hoodPos   = ShooterModel.hoodFromDistance(lastGoodDistanceIn);
+        if (fixedShotHeld) {
+            // HARD OVERRIDE: ignore Limelight/AutoAim entirely while held
+            targetRPM = FIXED_SHOT_RPM;
+            hoodPos = FIXED_HOOD_POS;
+
+            // Make sure shooter is enabled while holding fixed-shot
+            shooter.setEnabled(true);
+
+        } else {
+            // Normal behavior (autoaim / manual)
+            if (autoAimEnabled) {
+                boolean distFresh = (System.currentTimeMillis() - lastGoodDistanceMs) <= GOOD_DIST_STALE_MS;
+                if (distFresh) {
+                    targetRPM = ShooterModel.rpmFromDistance(lastGoodDistanceIn);
+                    hoodPos   = ShooterModel.hoodFromDistance(lastGoodDistanceIn);
+                } else {
+                    targetRPM = manualTargetRPM;
+                    hoodPos   = hood.getTargetPos();
+                }
             } else {
                 targetRPM = manualTargetRPM;
                 hoodPos   = hood.getTargetPos();
             }
-        } else {
-            targetRPM = manualTargetRPM;
-            hoodPos   = hood.getTargetPos();
         }
 
         shooter.setTargetRPM(targetRPM);
@@ -160,8 +181,15 @@ public class TeleOp_MainSubsystems extends OpMode {
         if (gamepad1.y) {
             intakeFeeder.setIntakePower(0.75);
             intakeFeeder.setFeederPower(0.75);
-        } else {
 
+        } else if (fixedShotHeld) {
+            // HOLD B: fixed shot sequence
+            intakeFeeder.setIntakePower(1.0);
+
+            boolean allowFeed = shooter.atSpeed(RPM_TOL);
+            intakeFeeder.setFeederPower(allowFeed ? 1.0 : 0.0);
+
+        } else {
             // Hold A: shoot-hold (auto enable shooter, intake forward, feed when at speed)
             if (gamepad1.a) {
                 shooter.setEnabled(true);
@@ -180,8 +208,8 @@ public class TeleOp_MainSubsystems extends OpMode {
                 else if (out > 0.05) intakeFeeder.setIntakePower(-out);
                 else intakeFeeder.setIntakePower(0.0);
 
-                // Feeder reverse: B
-                if (gamepad1.b) intakeFeeder.setFeederPower(-1.0);
+                // Feeder reverse moved to X (since B is fixed shot now)
+                if (gamepad1.x) intakeFeeder.setFeederPower(-1.0);
                 else intakeFeeder.setFeederPower(0.0);
             }
         }
@@ -194,8 +222,9 @@ public class TeleOp_MainSubsystems extends OpMode {
         intakeFeeder.update();
 
         // =======================
-        // Telemetry (clean, no angle debug)
+        // Telemetry
         // =======================
+        telemetry.addData("FixedShot(B held)", fixedShotHeld);
         telemetry.addData("AutoAim", autoAimEnabled);
         telemetry.addData("Shooter enabled", shooter.isEnabled());
         telemetry.addData("Mode", shooter.isTuningMode() ? "FF_ONLY (kV)" : "PIDF");
